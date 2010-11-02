@@ -53,8 +53,8 @@ USB_Descriptor_Device_t DeviceDescriptor =
 
 	.Endpoint0Size          = FIXED_CONTROL_ENDPOINT_SIZE,
 
-	.VendorID               = 0x03EB,
-	.ProductID              = 0x204A,
+	.VendorID               = 0x239A,       // Adafruit VID for our use only, thanks!
+ 	.ProductID              = 0x0001,       // #1 is the USB CDC (bootloader)
 	.ReleaseNumber          = VERSION_BCD(00.01),
 
 	.ManufacturerStrIndex   = NO_DESCRIPTOR,

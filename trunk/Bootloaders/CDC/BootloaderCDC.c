@@ -56,6 +56,30 @@ uint32_t CurrAddress;
  */
 bool RunBootloader = true;
 
+/* Adafruit Mods - make the bootloader 'time out' after 10 seconds */
+#define BOOTLOADTIMEOUT 10  // in approx 1/2 seconds units :)
+volatile uint8_t boottimeout = 0;  // the counter we'll use
+
+// the pointer to user land
+void (*app_start)(void) = 0x0000;
+
+// we'll pulse the onboard LED to indicate the bootloader
+#if (BOARD == BOARD_MICROTOUCH)
+
+#define BOOTLOADERLED_DDR DDRC
+#define BOOTLOADERLED_PORT PORTC
+#define BOOTLOADERLED 7
+
+#elif (BOARD == ADAFRUIT32U4)
+
+#define BOOTLOADERLED_DDR DDRE
+#define BOOTLOADERLED_PORT PORTE
+#define BOOTLOADERLED 6
+
+#endif
+
+/* End Adafruit Mods */
+
 
 /** Main program entry point. This routine configures the hardware required by the bootloader, then continuously
  *  runs the bootloader processing routine until instructed to soft-exit, or hard-reset via the watchdog to start
@@ -63,8 +87,41 @@ bool RunBootloader = true;
  */
 int main(void)
 {
+  /* Adafruit Mods - unless they pressed the button, get out of the bootloader and into userland */
+
+#if (BOARD == BOARD_MICROTOUCH)
+  DDRF |= _BV(0);
+  PORTF |= _BV(0);
+#endif
+
+  char ch = MCUSR;
+  MCUSR = 0;
+  
+  WDTCSR |= _BV(WDCE) | _BV(WDE); // turn off watchdog timer!
+  WDTCSR = 0;
+
+  boottimeout = 0;
+
+  if (! (ch &  _BV(EXTRF)) &&  (pgm_read_word_near(0) != 0xFFFF)) {
+    // if its a not an external reset...
+    app_start();  // skip bootloader
+  }
+
+  /* End Adafruit Mods */
+
 	/* Setup hardware required for the bootloader */
 	SetupHardware();
+
+	// adafruit board - turn on the LED to indicate the bootloader is active 
+
+	BOOTLOADERLED_DDR |= _BV( BOOTLOADERLED);
+	BOOTLOADERLED_PORT |= _BV( BOOTLOADERLED);
+
+	uint16_t blinkycounter = 0;
+	uint8_t pwmcounter = 0; // for the LED pulsing
+	uint8_t brightness = 0; // for the LED pulsing
+	int8_t pulsedirection = 1;
+	// end adafruit mods
 
 	/* Enable global interrupts so that the USB stack can function */
 	sei();
@@ -73,6 +130,40 @@ int main(void)
 	{
 		CDC_Task();
 		USB_USBTask();
+		
+		// Adafruit mods = we'll pulse an LED to indicate the bootloader is active
+		pwmcounter++;
+		
+		// after each PWM cycle, increase/decrease the brightness
+		if (pwmcounter == 0) {
+		  brightness += pulsedirection;
+		  BOOTLOADERLED_PORT |= _BV( BOOTLOADERLED);
+		}
+
+		// PWM compare match
+		if (pwmcounter == brightness) {
+		  BOOTLOADERLED_PORT &= ~_BV( BOOTLOADERLED);
+		}
+
+		// make the bootloade LED pulse up and down
+		if (brightness == 255) {
+		  pulsedirection = -1;
+		}
+		if ((brightness == 0) && (pulsedirection != 1)) {
+		  pulsedirection = 1;
+
+		  // each full pulse takes about one second
+		  boottimeout++;
+		} 
+		
+		// we took a long time, lets restart
+		if (boottimeout >= BOOTLOADTIMEOUT) {
+		  // check to see if we have any code loaded. if the first byte is blank, we shouldn't go
+		  if (pgm_read_word_near(0) != 0xFFFF) {
+		    // jump to code
+		    RunBootloader = false;
+		  }
+		}
 	}
 
 	/* Disconnect from the host - USB interface will be reset later along with the AVR */
@@ -334,6 +425,10 @@ void CDC_Task(void)
 	/* Check if endpoint has a command in it sent from the host */
 	if (Endpoint_IsOUTReceived())
 	{
+	  // adafruit mods - we are still processing data
+	  boottimeout = 0;
+
+
 		/* Read in the bootloader command (first byte sent from host) */
 		uint8_t Command = FetchNextCommandByte();
 
