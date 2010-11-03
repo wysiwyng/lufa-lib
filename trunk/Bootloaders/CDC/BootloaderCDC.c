@@ -64,18 +64,18 @@ volatile uint8_t boottimeout = 0;  // the counter we'll use
 void (*app_start)(void) = 0x0000;
 
 // we'll pulse the onboard LED to indicate the bootloader
-#if (BOARD == BOARD_MICROTOUCH)
+#define BOARD_MICROTOUCH 1
+#define BOARD_ADAFRUIT32U4 2
 
-#define BOOTLOADERLED_DDR DDRC
-#define BOOTLOADERLED_PORT PORTC
-#define BOOTLOADERLED 7
-
-#elif (BOARD == ADAFRUIT32U4)
-
-#define BOOTLOADERLED_DDR DDRE
-#define BOOTLOADERLED_PORT PORTE
-#define BOOTLOADERLED 6
-
+#if BOARD == BOARD_MICROTOUCH
+   #define BOOTLOADERLED_DDR DDRC
+   #define BOOTLOADERLED_PORT PORTC
+   #define BOOTLOADERLED 7
+#endif
+#if BOARD == BOARD_ADAFRUIT32U4
+   #define BOOTLOADERLED_DDR DDRE
+   #define BOOTLOADERLED_PORT PORTE
+   #define BOOTLOADERLED 6
 #endif
 
 /* End Adafruit Mods */
@@ -89,7 +89,7 @@ int main(void)
 {
   /* Adafruit Mods - unless they pressed the button, get out of the bootloader and into userland */
 
-#if (BOARD == BOARD_MICROTOUCH)
+#if BOARD == BOARD_MICROTOUCH
   DDRF |= _BV(0);
   PORTF |= _BV(0);
 #endif

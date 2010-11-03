@@ -54,7 +54,9 @@ MCU = atmega32u4
 # Target board (see library "Board Types" documentation, NONE for projects not requiring
 # LUFA board drivers). If USER is selected, put custom board drivers in a directory called 
 # "Board" inside the application directory.
-BOARD  = MICROTOUCH
+
+#BOARD  = MICROTOUCH
+BOARD  = ADAFRUIT32U4
 
 
 # Processor frequency.
