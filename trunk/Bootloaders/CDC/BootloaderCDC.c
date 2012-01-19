@@ -57,7 +57,7 @@ uint32_t CurrAddress;
 bool RunBootloader = true;
 
 /* Adafruit Mods - make the bootloader 'time out' after 10 seconds */
-#define BOOTLOADTIMEOUT 10  // in approx 1/2 seconds units :)
+#define BOOTLOADTIMEOUT 5  // in approx 1/2 seconds units :)
 volatile uint8_t boottimeout = 0;  // the counter we'll use
 
 // the pointer to user land
@@ -66,6 +66,7 @@ void (*app_start)(void) = 0x0000;
 // we'll pulse the onboard LED to indicate the bootloader
 #define BOARD_MICROTOUCH 1
 #define BOARD_ADAFRUIT32U4 2
+#define BOARD_FLORA 3
 
 #if BOARD == BOARD_MICROTOUCH
    #define BOOTLOADERLED_DDR DDRC
@@ -77,6 +78,30 @@ void (*app_start)(void) = 0x0000;
    #define BOOTLOADERLED_PORT PORTE
    #define BOOTLOADERLED 6
 #endif
+#if BOARD == BOARD_FLORA
+   #define BOOTLOADERLED_DDR DDRE
+   #define BOOTLOADERLED_PORT PORTE
+   #define BOOTLOADERLED 6
+#endif
+
+#include <util/delay.h>
+
+void blink(uint8_t b) {
+  BOOTLOADERLED_DDR |= _BV( BOOTLOADERLED);
+  while (b--) {
+    _delay_ms(100);
+    BOOTLOADERLED_PORT |= _BV( BOOTLOADERLED);
+    _delay_ms(100);
+    BOOTLOADERLED_PORT &= ~_BV( BOOTLOADERLED); 
+    _delay_ms(100);
+  }
+}
+bool USBConnected()
+{
+  uint8_t f = UDFNUML;
+ _delay_ms(3);
+ return (f != UDFNUML);
+}
 
 /* End Adafruit Mods */
 
@@ -88,17 +113,26 @@ void (*app_start)(void) = 0x0000;
 int main(void)
 {
   /* Adafruit Mods - unless they pressed the button, get out of the bootloader and into userland */
-
-#if BOARD == BOARD_MICROTOUCH
-  DDRF |= _BV(0);
-  PORTF |= _BV(0);
-#endif
-
   char ch = MCUSR;
   MCUSR = 0;
-  
+
+
   WDTCSR |= _BV(WDCE) | _BV(WDE); // turn off watchdog timer!
   WDTCSR = 0;
+
+#if BOARD == BOARD_MICROTOUCH
+  DDRF |= _BV(PF0);
+  if (ch == _BV(BORF)) {
+    PORTF &= ~_BV(PF0);
+  } else {
+    PORTF |= _BV(PF0);
+  }
+
+  //blink(ch);
+  //_delay_ms(1000);
+  blink(ch);
+  
+#endif
 
   boottimeout = 0;
 

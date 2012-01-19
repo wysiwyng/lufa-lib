@@ -57,7 +57,7 @@ MCU = atmega32u4
 
 #BOARD  = MICROTOUCH
 BOARD  = ADAFRUIT32U4
-
+#BOARD = FLORA
 
 # Processor frequency.
 #     This will define a symbol, F_CPU, in all source code files equal to the 
@@ -70,7 +70,13 @@ BOARD  = ADAFRUIT32U4
 #     does not *change* the processor frequency - it should merely be updated to
 #     reflect the processor speed set externally so that the code can use accurate
 #     software delays.
-F_CPU = 16000000
+
+
+ifeq ($(BOARD),FLORA)
+	F_CPU = 8000000
+else
+	F_CPU = 16000000
+endif
 
 
 # Input clock frequency.
@@ -349,6 +355,7 @@ AVRDUDE_PROGRAMMER = usbtiny
 AVRDUDE_PORT = usb
 
 AVRDUDE_WRITE_FLASH = -B 1 -U flash:w:$(TARGET).hex
+AVRDUDE_VERIFY_FLASH = -B 1 -U flash:v:$(TARGET).hex
 AVRDUDE_WRITE_FUSES = -B 1 -U flash:w:$(TARGET).hex
 #AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
 
@@ -524,6 +531,24 @@ program: $(TARGET).hex $(TARGET).eep
 
 fuse32u4:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lfuse:w:0xFC:m -U hfuse:w:0xD0:m -U efuse:w:0xF3:m
+
+full32u4: $(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -e
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lfuse:w:0xFC:m -U hfuse:w:0xD0:m -U efuse:w:0xC3:m 
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lock:w:0x2F:m
+
+verify32u4: $(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lfuse:v:0xFC:m -U hfuse:v:0xD0:m -U efuse:v:0xC3:m 
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_VERIFY_FLASH)
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lock:v:0x2F:m
+
+microtouch: $(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -e
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lfuse:w:0xFC:m -U hfuse:w:0xD0:m -U efuse:w:0xc3:m 
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -U lock:w:0x2F:m
+
 
 full:  $(TARGET).hex
 	$(AVRDUDE) $(AVRDUDE_FLAGS)
