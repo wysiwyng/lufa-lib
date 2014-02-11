@@ -67,6 +67,7 @@ void (*app_start)(void) = 0x0000;
 #define BOARD_MICROTOUCH 1
 #define BOARD_ADAFRUIT32U4 2
 #define BOARD_FLORA 3
+#define BOARD_MAI_MOTOR 4
 
 #if BOARD == BOARD_MICROTOUCH
    #define BOOTLOADERLED_DDR DDRC
@@ -83,10 +84,26 @@ void (*app_start)(void) = 0x0000;
    #define BOOTLOADERLED_PORT PORTE
    #define BOOTLOADERLED 6
 #endif
+#if BOARD == BOARD_MAI_MOTOR
+   #define BOOTLOADERLED_DDR DDRD
+   #define BOOTLOADERLED_PORT PORTD
+   #define BOOTLOADERLED1 6
+   #define BOOTLOADERLED2 7
+#endif
 
 #include <util/delay.h>
 
 void blink(uint8_t b) {
+#if BOARD == BOARD_MAI_MOTOR
+  BOOTLOADERLED_DDR |= (_BV( BOOTLOADERLED1) | _BV( BOOTLOADERLED2));
+  while (b--) {
+    _delay_ms(100);
+    BOOTLOADERLED_PORT |= (_BV( BOOTLOADERLED1) | _BV( BOOTLOADERLED2));
+    _delay_ms(100);
+    BOOTLOADERLED_PORT &= ~(_BV( BOOTLOADERLED1) | _BV( BOOTLOADERLED2)); 
+    _delay_ms(100);
+  }  
+#else
   BOOTLOADERLED_DDR |= _BV( BOOTLOADERLED);
   while (b--) {
     _delay_ms(100);
@@ -95,14 +112,15 @@ void blink(uint8_t b) {
     BOOTLOADERLED_PORT &= ~_BV( BOOTLOADERLED); 
     _delay_ms(100);
   }
+#endif
 }
-bool USBConnected()
+/*bool USBConnected()
 {
   uint8_t f = UDFNUML;
  _delay_ms(3);
  return (f != UDFNUML);
 }
-
+*/
 /* End Adafruit Mods */
 
 
@@ -147,11 +165,15 @@ int main(void)
 	SetupHardware();
 
 	// adafruit board - turn on the LED to indicate the bootloader is active 
-
+#if BOARD == BOARD_MAI_MOTOR
+	BOOTLOADERLED_DDR |= (_BV( BOOTLOADERLED1) | _BV( BOOTLOADERLED2));
+	BOOTLOADERLED_PORT |= (_BV( BOOTLOADERLED1) | _BV( BOOTLOADERLED2));
+#else
 	BOOTLOADERLED_DDR |= _BV( BOOTLOADERLED);
 	BOOTLOADERLED_PORT |= _BV( BOOTLOADERLED);
+#endif
 
-	uint16_t blinkycounter = 0;
+	//uint16_t blinkycounter = 0;
 	uint8_t pwmcounter = 0; // for the LED pulsing
 	uint8_t brightness = 0; // for the LED pulsing
 	int8_t pulsedirection = 1;
@@ -171,12 +193,20 @@ int main(void)
 		// after each PWM cycle, increase/decrease the brightness
 		if (pwmcounter == 0) {
 		  brightness += pulsedirection;
+#if BOARD == BOARD_MAI_MOTOR
+          BOOTLOADERLED_PORT |= (_BV( BOOTLOADERLED1) | _BV( BOOTLOADERLED2));
+#else
 		  BOOTLOADERLED_PORT |= _BV( BOOTLOADERLED);
+#endif
 		}
 
 		// PWM compare match
 		if (pwmcounter == brightness) {
+#if BOARD == BOARD_MAI_MOTOR
+          BOOTLOADERLED_PORT &= ~(_BV( BOOTLOADERLED1) | _BV( BOOTLOADERLED2));
+#else
 		  BOOTLOADERLED_PORT &= ~_BV( BOOTLOADERLED);
+#endif
 		}
 
 		// make the bootloade LED pulse up and down

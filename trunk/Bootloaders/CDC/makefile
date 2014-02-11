@@ -56,8 +56,9 @@ MCU = atmega32u4
 # "Board" inside the application directory.
 
 #BOARD  = MICROTOUCH
-BOARD  = ADAFRUIT32U4
+#BOARD  = ADAFRUIT32U4
 #BOARD = FLORA
+BOARD = MAI_MOTOR
 
 # Processor frequency.
 #     This will define a symbol, F_CPU, in all source code files equal to the 
